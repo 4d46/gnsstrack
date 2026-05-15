@@ -1,6 +1,7 @@
 package service
 
 import (
+	"io"
 	"testing"
 	"time"
 
@@ -11,14 +12,14 @@ import (
 func TestPoller_Tick(t *testing.T) {
 	cfg := &config.Config{
 		Polling: config.PollingConfig{
-			NormalLoggingRateMS:      1000,
-			EnhancedLoggingRateMS:    100,
+			NormalLoggingRateMS:     1000,
+			EnhancedLoggingRateMS:   100,
 			EnableEnhancedOnAnomaly: true,
 		},
 	}
 
 	mockBus := &i2c.MockBus{}
-	poller := NewPoller(cfg, mockBus)
+	poller := NewPoller(cfg, mockBus, io.Discard)
 
 	// Case 1: Normal rate
 	status := &GNSSStatus{Anomalies: false}

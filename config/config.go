@@ -14,9 +14,9 @@ type Config struct {
 }
 
 type PollingConfig struct {
-	SoftwareRateMS           int  `yaml:"software_rate_ms"`
-	NormalLoggingRateMS      int  `yaml:"normal_logging_rate_ms"`
-	EnhancedLoggingRateMS    int  `yaml:"enhanced_logging_rate_ms"`
+	SoftwareRateMS          int  `yaml:"software_rate_ms"`
+	NormalLoggingRateMS     int  `yaml:"normal_logging_rate_ms"`
+	EnhancedLoggingRateMS   int  `yaml:"enhanced_logging_rate_ms"`
 	EnableEnhancedOnAnomaly bool `yaml:"enable_enhanced_on_anomaly"`
 }
 

@@ -17,24 +17,24 @@ const (
 )
 
 type NavPVT struct {
-	Year      uint16
-	Month     uint8
-	Day       uint8
-	Hour      uint8
-	Min       uint8
-	Sec       uint8
-	FixType   uint8
-	Flags     uint8
-	NumSV     uint8
-	Lon       int32 // 1e-7 deg
-	Lat       int32 // 1e-7 deg
-	Height    int32 // mm
-	HMSL      int32 // mm
-	HAcc      uint32
-	VAcc      uint32
-	GSpeed    int32 // mm/s
-	HeadMot   int32 // 1e-5 deg
-	PDOP      uint16
+	Year    uint16
+	Month   uint8
+	Day     uint8
+	Hour    uint8
+	Min     uint8
+	Sec     uint8
+	FixType uint8
+	Flags   uint8
+	NumSV   uint8
+	Lon     int32 // 1e-7 deg
+	Lat     int32 // 1e-7 deg
+	Height  int32 // mm
+	HMSL    int32 // mm
+	HAcc    uint32
+	VAcc    uint32
+	GSpeed  int32 // mm/s
+	HeadMot int32 // 1e-5 deg
+	PDOP    uint16
 }
 
 type SecSig struct {
@@ -138,7 +138,7 @@ func EncodePoll(class, id byte) []byte {
 	frame[3] = id
 	frame[4] = 0 // Length LS
 	frame[5] = 0 // Length MS
-	
+
 	ckA, ckB := CalculateChecksum(frame[2:6])
 	frame[6] = ckA
 	frame[7] = ckB

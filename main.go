@@ -86,7 +86,7 @@ func runService(args []string) {
 
 	poller := service.NewPoller(cfg, bus, diskLogger)
 	stopCh := make(chan struct{})
-	
+
 	// Start status HTTP server in a goroutine
 	go poller.StartStatusServer(cfg.Status.ListenAddress)
 
