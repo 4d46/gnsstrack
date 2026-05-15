@@ -1,0 +1,5 @@
+bin/
+gnsstrack
+*.pdf
+*.md
+!README.md

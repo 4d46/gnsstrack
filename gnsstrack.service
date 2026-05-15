@@ -1,0 +1,13 @@
+[Unit]
+Description=GNSS Tracking and Logging Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gnsstrack service --config /etc/gnsstrack/config.yaml
+Restart=on-failure
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

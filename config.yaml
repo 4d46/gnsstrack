@@ -1,0 +1,18 @@
+polling:
+  software_rate_ms: 1000
+  normal_logging_rate_ms: 60000
+  enhanced_logging_rate_ms: 1000
+  enable_enhanced_on_anomaly: true
+
+logging:
+  directory: "/tmp/gnsstrack"
+  #directory: "/var/log/gnsstrack"
+  max_size_mb: 50
+  max_backups: 100
+
+i2c:
+  bus: 1
+  address: 0x42
+
+status:
+  listen_address: "127.0.0.1:8080"
