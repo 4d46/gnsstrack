@@ -16,6 +16,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+var version = "dev"
+
 func main() {
 	if len(os.Args) < 2 {
 		printHelp()
@@ -27,6 +29,8 @@ func main() {
 		runService(os.Args[2:])
 	case "status":
 		runStatus(os.Args[2:])
+	case "version":
+		fmt.Printf("gnsstrack %s\n", version)
 	case "help":
 		printHelp()
 	default:
@@ -43,6 +47,7 @@ func printHelp() {
 	fmt.Println("\nCommands:")
 	fmt.Println("  service   Run the GNSS tracking daemon")
 	fmt.Println("  status    Check the status of the running service")
+	fmt.Println("  version   Print version information")
 	fmt.Println("  help      Print this help message")
 }
 

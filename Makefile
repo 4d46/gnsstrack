@@ -4,7 +4,8 @@ MODULE_NAME=4d46.uk/gnsstrack
 DIST_DIR=bin
 
 # Build flags
-LDFLAGS=-ldflags "-s -w"
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION)"
 
 .PHONY: all build build-linux-arm64 clean test help
 

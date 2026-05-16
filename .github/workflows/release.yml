@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: read-all
+
+jobs:
+  release:
+    if: github.repository == '4d46/gnsstrack'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff  # v5.6.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          GOOS=linux GOARCH=arm64 go build \
+            -ldflags "-s -w -X main.version=${VERSION}" \
+            -o bin/gnsstrack main.go
+
+      - name: Package
+        run: |
+          mkdir -p release
+          cp bin/gnsstrack        release/gnsstrack
+          cp config.yaml          release/config.yaml
+          cp gnsstrack.service    release/gnsstrack.service
+          cp README.md            release/README.md
+          tar -czf gnsstrack-linux-arm64.tar.gz -C release .
+
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2.6.2
+        with:
+          files: gnsstrack-linux-arm64.tar.gz
+          generate_release_notes: true
