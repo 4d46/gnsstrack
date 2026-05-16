@@ -15,6 +15,7 @@ polling:
 
 logging:
   directory: "/tmp/gnsstrack"
+  simulation_directory: "/tmp/gnsstrack/sim"
   max_size_mb: 10
   max_backups: 5
 
@@ -48,6 +49,9 @@ status:
 	}
 	if cfg.Logging.Directory != "/tmp/gnsstrack" {
 		t.Errorf("expected Directory /tmp/gnsstrack, got %s", cfg.Logging.Directory)
+	}
+	if cfg.Logging.SimulationDirectory != "/tmp/gnsstrack/sim" {
+		t.Errorf("expected SimulationDirectory /tmp/gnsstrack/sim, got %s", cfg.Logging.SimulationDirectory)
 	}
 	if cfg.I2C.Address != 0x43 {
 		t.Errorf("expected Address 0x43, got 0x%x", cfg.I2C.Address)

@@ -21,9 +21,10 @@ type PollingConfig struct {
 }
 
 type LoggingConfig struct {
-	Directory  string `yaml:"directory"`
-	MaxSizeMB  int    `yaml:"max_size_mb"`
-	MaxBackups int    `yaml:"max_backups"`
+	Directory           string `yaml:"directory"`
+	SimulationDirectory string `yaml:"simulation_directory"`
+	MaxSizeMB           int    `yaml:"max_size_mb"`
+	MaxBackups          int    `yaml:"max_backups"`
 }
 
 type I2CConfig struct {

@@ -64,12 +64,16 @@ func runService(args []string) {
 
 	// Initialize Logger
 	logFilename := "gnss_history.log"
+	logDir := cfg.Logging.Directory
 	if *simulate {
 		logFilename = "simulated_gnss_history.log"
+		if cfg.Logging.SimulationDirectory != "" {
+			logDir = cfg.Logging.SimulationDirectory
+		}
 	}
 
 	diskLogger := &lumberjack.Logger{
-		Filename:   filepath.Join(cfg.Logging.Directory, logFilename),
+		Filename:   filepath.Join(logDir, logFilename),
 		MaxSize:    cfg.Logging.MaxSizeMB,
 		MaxBackups: cfg.Logging.MaxBackups,
 		LocalTime:  true,
