@@ -64,5 +64,5 @@ Single ARM64 binary targets both Raspberry Pi CM4 and CM5 — both are ARMv8.
 Cross-compiled with: `GOOS=linux GOARCH=arm64`
 
 Release package contains: binary, `config.yaml`, `gnsstrack.service`, `README.md`
-Stable Ansible download URL:
+Stable download URL:
 `https://github.com/4d46/gnsstrack/releases/latest/download/gnsstrack-linux-arm64.tar.gz`
