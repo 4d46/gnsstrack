@@ -3,3 +3,4 @@ gnsstrack
 *.pdf
 *.md
 !README.md
+!CHANGELOG.md

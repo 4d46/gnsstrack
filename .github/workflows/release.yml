@@ -36,7 +36,24 @@ jobs:
           cp README.md            release/README.md
           tar -czf gnsstrack-linux-arm64.tar.gz -C release .
 
+      - name: Extract changelog entry
+        id: changelog
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
+          if [[ -n "$NOTES" ]]; then
+            echo "has_notes=true" >> $GITHUB_OUTPUT
+            {
+              echo 'notes<<EOF'
+              echo "$NOTES"
+              echo EOF
+            } >> $GITHUB_OUTPUT
+          else
+            echo "has_notes=false" >> $GITHUB_OUTPUT
+          fi
+
       - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           files: gnsstrack-linux-arm64.tar.gz
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.notes }}
+          generate_release_notes: ${{ steps.changelog.outputs.has_notes != 'true' }}
