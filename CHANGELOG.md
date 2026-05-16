@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-05-16
+
+### Changed
+- Added `simulation_directory` config field so real and simulation log
+  directories can be configured independently — no need to edit `config.yaml`
+  when switching between `--simulate` and normal mode
+
 ## [v1.0.0] - 2026-05-16
 
 ### Added

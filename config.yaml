@@ -5,8 +5,8 @@ polling:
   enable_enhanced_on_anomaly: true
 
 logging:
-  directory: "/tmp/gnsstrack"
-  #directory: "/var/log/gnsstrack"
+  directory: "/var/log/gnsstrack"
+  simulation_directory: "/tmp/gnsstrack"
   max_size_mb: 50
   max_backups: 100
 
