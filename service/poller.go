@@ -24,13 +24,14 @@ type Poller struct {
 }
 
 type ServiceStatus struct {
-	StartTime     time.Time   `json:"start_time"`
-	UptimeSeconds float64     `json:"uptime_seconds"`
-	LastPoll      time.Time   `json:"last_poll"`
-	LastLogTime   time.Time   `json:"last_log_time"`
-	LoggingRate   string      `json:"current_logging_rate"`
-	LatestGNSS    *GNSSStatus `json:"latest_gnss"`
-	LogsWritten   int         `json:"logs_written"`
+	StartTime          time.Time   `json:"start_time"`
+	UptimeSeconds      float64     `json:"uptime_seconds"`
+	LastPoll           time.Time   `json:"last_poll"`
+	LastLogTime        time.Time   `json:"last_log_time"`
+	LoggingRate        string      `json:"current_logging_rate"`
+	LatestGNSS         *GNSSStatus `json:"latest_gnss"`
+	LogsWritten        int         `json:"logs_written"`
+	LatestTemperatureC *float64    `json:"latest_temperature_c,omitempty"`
 }
 
 func NewPoller(cfg *config.Config, bus i2c.I2CBus, logger io.Writer) *Poller {
@@ -59,6 +60,12 @@ type GNSSStatus struct {
 	PDOP          float64   `json:"pdop,omitempty"`
 	FixType       int       `json:"fix_type"`
 	SBASUsed      bool      `json:"sbas_used"`
+}
+
+func (p *Poller) SetLatestTemperature(t float64) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.state.LatestTemperatureC = &t
 }
 
 func (p *Poller) GetStatus() ServiceStatus {

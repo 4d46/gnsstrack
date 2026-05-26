@@ -23,6 +23,11 @@ i2c:
   bus: 0
   address: 0x43
 
+rtc:
+  bus: 1
+  address: 0x68
+  logging_rate_ms: 360000
+
 status:
   listen_address: "127.0.0.1:9090"
 `
@@ -55,6 +60,12 @@ status:
 	}
 	if cfg.I2C.Address != 0x43 {
 		t.Errorf("expected Address 0x43, got 0x%x", cfg.I2C.Address)
+	}
+	if cfg.RTC.Address != 0x68 {
+		t.Errorf("expected RTC Address 0x68, got 0x%x", cfg.RTC.Address)
+	}
+	if cfg.RTC.LoggingRateMS != 360000 {
+		t.Errorf("expected RTC LoggingRateMS 360000, got %d", cfg.RTC.LoggingRateMS)
 	}
 	if cfg.Status.ListenAddress != "127.0.0.1:9090" {
 		t.Errorf("expected ListenAddress 127.0.0.1:9090, got %s", cfg.Status.ListenAddress)
