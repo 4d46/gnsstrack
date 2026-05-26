@@ -15,7 +15,7 @@ import (
 
 type Poller struct {
 	cfg     *config.Config
-	bus     i2c.I2CBus
+	dev     *i2c.Device
 	lastLog time.Time
 	logger  io.Writer
 
@@ -34,10 +34,10 @@ type ServiceStatus struct {
 	LatestTemperatureC *float64    `json:"latest_temperature_c,omitempty"`
 }
 
-func NewPoller(cfg *config.Config, bus i2c.I2CBus, logger io.Writer) *Poller {
+func NewPoller(cfg *config.Config, dev *i2c.Device, logger io.Writer) *Poller {
 	return &Poller{
 		cfg:    cfg,
-		bus:    bus,
+		dev:    dev,
 		logger: logger,
 		state: ServiceStatus{
 			StartTime:   time.Now(),
@@ -142,10 +142,10 @@ func (p *Poller) pollGNSS() (*GNSSStatus, error) {
 	pvtPoll := ubx.EncodePoll(ubx.ClassNav, ubx.IDNavPVT)
 	secPoll := ubx.EncodePoll(ubx.ClassSec, ubx.IDSecSig)
 
-	if err := p.bus.Tx(pvtPoll, nil); err != nil {
+	if err := p.dev.Tx(pvtPoll, nil); err != nil {
 		return nil, fmt.Errorf("failed to send NAV-PVT poll: %v", err)
 	}
-	if err := p.bus.Tx(secPoll, nil); err != nil {
+	if err := p.dev.Tx(secPoll, nil); err != nil {
 		return nil, fmt.Errorf("failed to send SEC-SIG poll: %v", err)
 	}
 
@@ -154,18 +154,24 @@ func (p *Poller) pollGNSS() (*GNSSStatus, error) {
 
 	// 3. Read available byte count
 	lenBuf := make([]byte, 2)
-	if err := p.bus.Tx([]byte{0xFD}, lenBuf); err != nil {
+	if err := p.dev.Tx([]byte{0xFD}, lenBuf); err != nil {
 		return nil, err
 	}
 
 	avail := int(lenBuf[0])<<8 | int(lenBuf[1])
-	if avail == 0 {
+	if avail == 0 || avail == 0xFFFF {
 		return nil, nil
+	}
+
+	// Limit read size to a sane maximum (u-blox buffer is typically < 4KB,
+	// and i2c-dev often has a 4KB limit per message)
+	if avail > 4096 {
+		avail = 4096
 	}
 
 	// 4. Read available data
 	data := make([]byte, avail)
-	if err := p.bus.Tx([]byte{0xFF}, data); err != nil {
+	if err := p.dev.Tx([]byte{0xFF}, data); err != nil {
 		return nil, err
 	}
 

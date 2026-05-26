@@ -12,17 +12,26 @@ import (
 
 // I2CBus defines the interface for I2C communication.
 type I2CBus interface {
-	Tx(w, r []byte) error
+	Tx(addr uint16, w, r []byte) error
 	Close() error
+}
+
+// Device provides a scoped handle for a specific address on an I2CBus.
+type Device struct {
+	Bus  I2CBus
+	Addr uint16
+}
+
+func (d *Device) Tx(w, r []byte) error {
+	return d.Bus.Tx(d.Addr, w, r)
 }
 
 // RealBus is a concrete implementation of I2CBus using periph.io.
 type RealBus struct {
-	closer func() error
-	dev    *i2c.Dev
+	bus i2c.BusCloser
 }
 
-func NewRealBus(busNum int, addr uint16) (*RealBus, error) {
+func NewRealBus(busNum int) (*RealBus, error) {
 	if _, err := host.Init(); err != nil {
 		return nil, err
 	}
@@ -32,28 +41,25 @@ func NewRealBus(busNum int, addr uint16) (*RealBus, error) {
 		return nil, err
 	}
 
-	return &RealBus{
-		closer: bus.Close,
-		dev:    &i2c.Dev{Bus: bus, Addr: addr},
-	}, nil
+	return &RealBus{bus: bus}, nil
 }
 
-func (b *RealBus) Tx(w, r []byte) error {
-	return b.dev.Tx(w, r)
+func (b *RealBus) Tx(addr uint16, w, r []byte) error {
+	return b.bus.Tx(addr, w, r)
 }
 
 func (b *RealBus) Close() error {
-	return b.closer()
+	return b.bus.Close()
 }
 
 // MockBus is a mock implementation for testing.
 type MockBus struct {
-	OnTx func(w, r []byte) error
+	OnTx func(addr uint16, w, r []byte) error
 }
 
-func (m *MockBus) Tx(w, r []byte) error {
+func (m *MockBus) Tx(addr uint16, w, r []byte) error {
 	if m.OnTx != nil {
-		return m.OnTx(w, r)
+		return m.OnTx(addr, w, r)
 	}
 	return nil
 }
@@ -62,7 +68,7 @@ func (m *MockBus) Close() error {
 	return nil
 }
 
-// SimulatedBus generates fake u-blox DDC data for testing without hardware.
+// SimulatedBus generates fake data for testing without hardware.
 type SimulatedBus struct {
 	ticker *time.Ticker
 }
@@ -73,31 +79,41 @@ func NewSimulatedBus() *SimulatedBus {
 	}
 }
 
-func (s *SimulatedBus) Tx(w, r []byte) error {
-	if len(w) > 0 && w[0] == 0xFD {
-		// We'll simulate a 100 byte buffer waiting (92 for PVT + 8 for SEC-SIG approx)
-		if len(r) >= 2 {
-			r[0] = 0x00
-			r[1] = 100
+func (s *SimulatedBus) Tx(addr uint16, w, r []byte) error {
+	// Handle RTC (0x68)
+	if addr == 0x68 {
+		if len(w) > 0 && w[0] == 0x11 && len(r) >= 2 {
+			r[0] = 23   // 23 °C integer part
+			r[1] = 0xC0 // 0.75 fractional part (0xC0 >> 6 = 3; 3 * 0.25 = 0.75)
 		}
 		return nil
 	}
 
-	if len(w) > 0 && w[0] == 0xFF {
-		// Generate fake NAV-PVT (92 bytes payload + 8 header/checksum)
-		pvtPayload := make([]byte, 92)
-		binary.LittleEndian.PutUint16(pvtPayload[4:6], 2026) // Year
-		pvtPayload[6] = 5                                    // Month
-		pvtPayload[7] = 15                                   // Day
-		pvtPayload[20] = 3                                   // FixType (3D)
-		lon := int32(-1234567)
-		lat := int32(51507400)
-		binary.LittleEndian.PutUint32(pvtPayload[24:28], uint32(lon)) // Lon
-		binary.LittleEndian.PutUint32(pvtPayload[28:32], uint32(lat)) // Lat
+	// Handle GNSS (0x42)
+	if addr == 0x42 {
+		if len(w) > 0 && w[0] == 0xFD {
+			if len(r) >= 2 {
+				r[0] = 0x00
+				r[1] = 100
+			}
+			return nil
+		}
 
-		pvtFrame := wrapUBX(0x01, 0x07, pvtPayload)
-		copy(r, pvtFrame)
-		return nil
+		if len(w) > 0 && w[0] == 0xFF {
+			pvtPayload := make([]byte, 92)
+			binary.LittleEndian.PutUint16(pvtPayload[4:6], 2026)
+			pvtPayload[6] = 5
+			pvtPayload[7] = 15
+			pvtPayload[20] = 3
+			lon := int32(-1234567)
+			lat := int32(51507400)
+			binary.LittleEndian.PutUint32(pvtPayload[24:28], uint32(lon))
+			binary.LittleEndian.PutUint32(pvtPayload[28:32], uint32(lat))
+
+			pvtFrame := wrapUBX(0x01, 0x07, pvtPayload)
+			copy(r, pvtFrame)
+			return nil
+		}
 	}
 
 	return nil
@@ -125,24 +141,5 @@ func wrapUBX(class, id byte, payload []byte) []byte {
 
 func (s *SimulatedBus) Close() error {
 	s.ticker.Stop()
-	return nil
-}
-
-// SimulatedRTCBus returns a constant 22.0 °C for DS3231 temperature register reads.
-type SimulatedRTCBus struct{}
-
-func NewSimulatedRTCBus() *SimulatedRTCBus {
-	return &SimulatedRTCBus{}
-}
-
-func (s *SimulatedRTCBus) Tx(w, r []byte) error {
-	if len(w) > 0 && w[0] == 0x11 && len(r) >= 2 {
-		r[0] = 22 // 22 °C integer part
-		r[1] = 0  // no fractional part
-	}
-	return nil
-}
-
-func (s *SimulatedRTCBus) Close() error {
 	return nil
 }

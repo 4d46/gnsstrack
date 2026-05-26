@@ -1,7 +1,7 @@
 polling:
-  software_rate_ms: 1000
+  software_rate_ms: 6000
   normal_logging_rate_ms: 60000
-  enhanced_logging_rate_ms: 1000
+  enhanced_logging_rate_ms: 6000
   enable_enhanced_on_anomaly: true
 
 logging:

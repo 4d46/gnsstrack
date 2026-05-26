@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.1.1] - 2026-05-26
+
+### Fixed
+- I2C "invalid argument" error caused by unhandled large buffer length values
+- RTC temperature logging conflict when the device is claimed by the kernel
+- Improved robustness of I2C bus management with shared connection architecture
+
+### Changed
+- Default polling rate reduced to 6 seconds to minimize I2C bus traffic
+
 ## [v1.1.0] - 2026-05-26
 
 ### Added
