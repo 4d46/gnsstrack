@@ -88,18 +88,20 @@ func runService(args []string) {
 		bus = i2c.NewSimulatedBus()
 	} else {
 		log.Printf("Starting gnsstrack service (Logging to %s)", filepath.Join(logDir, logFilename))
-		bus, err = i2c.NewRealBus(cfg.I2C.Bus, uint16(cfg.I2C.Address))
+		// Note: We use the GNSS bus number here; RTC is assumed to be on the same bus or handled via sysfs
+		bus, err = i2c.NewRealBus(cfg.I2C.Bus)
 		if err != nil {
 			log.Fatalf("Failed to open I2C bus: %v", err)
 		}
 	}
 	defer bus.Close()
 
-	poller := service.NewPoller(cfg, bus, diskLogger)
+	gnssDev := &i2c.Device{Bus: bus, Addr: uint16(cfg.I2C.Address)}
+	poller := service.NewPoller(cfg, gnssDev, diskLogger)
 	stopCh := make(chan struct{})
 
 	// Detect RTC and start temperature logging if present
-	startRTCLogging(cfg, poller, logDir, stopCh, *simulate)
+	startRTCLogging(cfg, poller, bus, logDir, stopCh, *simulate)
 
 	// Start status HTTP server in a goroutine
 	go poller.StartStatusServer(cfg.Status.ListenAddress)
@@ -107,28 +109,19 @@ func runService(args []string) {
 	poller.Run(stopCh)
 }
 
-func startRTCLogging(cfg *config.Config, poller *service.Poller, logDir string, stopCh <-chan struct{}, simulate bool) {
+func startRTCLogging(cfg *config.Config, poller *service.Poller, bus i2c.I2CBus, logDir string, stopCh <-chan struct{}, simulate bool) {
 	logFilename := "rtc_temperature.log"
 	if simulate {
 		logFilename = "simulated_rtc_temperature.log"
 	}
 
-	var rtcBus i2c.I2CBus
-	if simulate {
-		rtcBus = i2c.NewSimulatedRTCBus()
-	} else {
-		b, openErr := i2c.NewRealBus(cfg.RTC.Bus, uint16(cfg.RTC.Address))
-		if openErr != nil {
-			log.Printf("RTC not available, temperature logging disabled: %v", openErr)
-			return
-		}
-		rtcBus = b
-	}
+	rtcDev := &i2c.Device{Bus: bus, Addr: uint16(cfg.RTC.Address)}
+	sensor := rtc.New(rtcDev)
 
-	sensor := rtc.New(rtcBus)
-	if _, probeErr := sensor.ReadTemperature(); probeErr != nil {
-		log.Printf("RTC probe failed, temperature logging disabled: %v", probeErr)
-		rtcBus.Close()
+	// Probe the sensor
+	temp, probeErr := sensor.ReadTemperature()
+	if probeErr != nil {
+		log.Printf("RTC probe failed (both I2C and sysfs), temperature logging disabled: %v", probeErr)
 		return
 	}
 
@@ -139,10 +132,9 @@ func startRTCLogging(cfg *config.Config, poller *service.Poller, logDir string, 
 		LocalTime:  true,
 		Compress:   true,
 	}
-	log.Printf("RTC detected, temperature logging to %s", filepath.Join(logDir, logFilename))
+	log.Printf("RTC detected (%.2f °C), temperature logging to %s", temp, filepath.Join(logDir, logFilename))
 
 	go func() {
-		defer rtcBus.Close()
 		ticker := time.NewTicker(time.Duration(cfg.RTC.LoggingRateMS) * time.Millisecond)
 		defer ticker.Stop()
 		for {

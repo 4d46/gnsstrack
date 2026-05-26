@@ -19,7 +19,8 @@ func TestPoller_Tick(t *testing.T) {
 	}
 
 	mockBus := &i2c.MockBus{}
-	poller := NewPoller(cfg, mockBus, io.Discard)
+	mockDev := &i2c.Device{Bus: mockBus, Addr: 0x42}
+	poller := NewPoller(cfg, mockDev, io.Discard)
 
 	// Case 1: Normal rate
 	status := &GNSSStatus{Anomalies: false}
