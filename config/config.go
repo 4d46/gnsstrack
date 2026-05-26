@@ -10,6 +10,7 @@ type Config struct {
 	Polling PollingConfig `yaml:"polling"`
 	Logging LoggingConfig `yaml:"logging"`
 	I2C     I2CConfig     `yaml:"i2c"`
+	RTC     RTCConfig     `yaml:"rtc"`
 	Status  StatusConfig  `yaml:"status"`
 }
 
@@ -30,6 +31,12 @@ type LoggingConfig struct {
 type I2CConfig struct {
 	Bus     int   `yaml:"bus"`
 	Address uint8 `yaml:"address"`
+}
+
+type RTCConfig struct {
+	Bus           int   `yaml:"bus"`
+	Address       uint8 `yaml:"address"`
+	LoggingRateMS int   `yaml:"logging_rate_ms"`
 }
 
 type StatusConfig struct {

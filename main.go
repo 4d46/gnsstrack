@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"4d46.uk/gnsstrack/config"
 	"4d46.uk/gnsstrack/i2c"
+	"4d46.uk/gnsstrack/rtc"
 	"4d46.uk/gnsstrack/service"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -82,10 +84,10 @@ func runService(args []string) {
 
 	var bus i2c.I2CBus
 	if *simulate {
-		log.Printf("Starting in SIMULATION MODE (Logging to %s)", filepath.Join(cfg.Logging.Directory, logFilename))
+		log.Printf("Starting in SIMULATION MODE (Logging to %s)", filepath.Join(logDir, logFilename))
 		bus = i2c.NewSimulatedBus()
 	} else {
-		log.Printf("Starting gnsstrack service (Logging to %s)", filepath.Join(cfg.Logging.Directory, logFilename))
+		log.Printf("Starting gnsstrack service (Logging to %s)", filepath.Join(logDir, logFilename))
 		bus, err = i2c.NewRealBus(cfg.I2C.Bus, uint16(cfg.I2C.Address))
 		if err != nil {
 			log.Fatalf("Failed to open I2C bus: %v", err)
@@ -96,10 +98,79 @@ func runService(args []string) {
 	poller := service.NewPoller(cfg, bus, diskLogger)
 	stopCh := make(chan struct{})
 
+	// Detect RTC and start temperature logging if present
+	startRTCLogging(cfg, poller, logDir, stopCh, *simulate)
+
 	// Start status HTTP server in a goroutine
 	go poller.StartStatusServer(cfg.Status.ListenAddress)
 
 	poller.Run(stopCh)
+}
+
+func startRTCLogging(cfg *config.Config, poller *service.Poller, logDir string, stopCh <-chan struct{}, simulate bool) {
+	logFilename := "rtc_temperature.log"
+	if simulate {
+		logFilename = "simulated_rtc_temperature.log"
+	}
+
+	var rtcBus i2c.I2CBus
+	if simulate {
+		rtcBus = i2c.NewSimulatedRTCBus()
+	} else {
+		b, openErr := i2c.NewRealBus(cfg.RTC.Bus, uint16(cfg.RTC.Address))
+		if openErr != nil {
+			log.Printf("RTC not available, temperature logging disabled: %v", openErr)
+			return
+		}
+		rtcBus = b
+	}
+
+	sensor := rtc.New(rtcBus)
+	if _, probeErr := sensor.ReadTemperature(); probeErr != nil {
+		log.Printf("RTC probe failed, temperature logging disabled: %v", probeErr)
+		rtcBus.Close()
+		return
+	}
+
+	rtcLogger := &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, logFilename),
+		MaxSize:    cfg.Logging.MaxSizeMB,
+		MaxBackups: cfg.Logging.MaxBackups,
+		LocalTime:  true,
+		Compress:   true,
+	}
+	log.Printf("RTC detected, temperature logging to %s", filepath.Join(logDir, logFilename))
+
+	go func() {
+		defer rtcBus.Close()
+		ticker := time.NewTicker(time.Duration(cfg.RTC.LoggingRateMS) * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopCh:
+				return
+			case <-ticker.C:
+				temp, readErr := sensor.ReadTemperature()
+				if readErr != nil {
+					log.Printf("RTC read error: %v", readErr)
+					continue
+				}
+				poller.SetLatestTemperature(temp)
+				entry := struct {
+					Timestamp   time.Time `json:"timestamp"`
+					Temperature float64   `json:"temperature_c"`
+				}{time.Now().UTC(), temp}
+				data, marshalErr := json.Marshal(entry)
+				if marshalErr != nil {
+					log.Printf("Failed to marshal temperature: %v", marshalErr)
+					continue
+				}
+				if _, writeErr := rtcLogger.Write(append(data, '\n')); writeErr != nil {
+					log.Printf("Failed to write temperature log: %v", writeErr)
+				}
+			}
+		}
+	}()
 }
 
 func runStatus(args []string) {
@@ -142,5 +213,8 @@ func runStatus(args []string) {
 		fmt.Printf("Spoofing:       %d\n", status.LatestGNSS.SpoofingState)
 	} else {
 		fmt.Printf("GNSS Data:      No data yet\n")
+	}
+	if status.LatestTemperatureC != nil {
+		fmt.Printf("Temperature:    %.2f °C\n", *status.LatestTemperatureC)
 	}
 }

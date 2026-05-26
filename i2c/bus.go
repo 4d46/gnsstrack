@@ -127,3 +127,22 @@ func (s *SimulatedBus) Close() error {
 	s.ticker.Stop()
 	return nil
 }
+
+// SimulatedRTCBus returns a constant 22.0 °C for DS3231 temperature register reads.
+type SimulatedRTCBus struct{}
+
+func NewSimulatedRTCBus() *SimulatedRTCBus {
+	return &SimulatedRTCBus{}
+}
+
+func (s *SimulatedRTCBus) Tx(w, r []byte) error {
+	if len(w) > 0 && w[0] == 0x11 && len(r) >= 2 {
+		r[0] = 22 // 22 °C integer part
+		r[1] = 0  // no fractional part
+	}
+	return nil
+}
+
+func (s *SimulatedRTCBus) Close() error {
+	return nil
+}

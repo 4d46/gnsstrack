@@ -14,5 +14,10 @@ i2c:
   bus: 1
   address: 0x42
 
+rtc:
+  bus: 1
+  address: 0x68
+  logging_rate_ms: 360000   # 6 minutes
+
 status:
   listen_address: "127.0.0.1:8080"
