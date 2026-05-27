@@ -170,6 +170,15 @@ func runStatus(args []string) {
 	configPath := fs.String("config", "config.yaml", "Path to config file")
 	fs.Parse(args)
 
+	// Fallback to system config if local one doesn't exist and no path was explicitly provided
+	if *configPath == "config.yaml" {
+		if _, err := os.Stat("config.yaml"); os.IsNotExist(err) {
+			if _, err := os.Stat("/etc/gnsstrack/config.yaml"); err == nil {
+				*configPath = "/etc/gnsstrack/config.yaml"
+			}
+		}
+	}
+
 	cfg, err := config.LoadConfig(*configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config (needed for status address): %v", err)

@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [v1.1.2] - 2026-05-27
+
+### Fixed
+- Reverted polling rate to 1 second for better GNSS hardware compatibility and buffer stability
+- Improved `status` command robustness with fallback to system config at `/etc/gnsstrack/config.yaml`
+- Fixed status server address conflict by moving to bespoke port 6767
+
 ## [v1.1.1] - 2026-05-26
 
 ### Fixed
